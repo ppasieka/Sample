@@ -1,0 +1,18 @@
+﻿@model Sample.Models.BoardModel
+@{
+    ViewBag.Title = "Draw";
+}
+
+<h2>Draw</h2>
+
+<div id="json">
+
+</div>
+
+<script>
+    var jsPoints = @Html.ToJson(Model.Points);
+
+    $(document).ready(function(){
+        $('#json').text(JSON.stringify(jsPoints));
+    });
+</script>
