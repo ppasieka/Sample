@@ -5,14 +5,166 @@
 
 <h2>Draw</h2>
 
-<div id="json">
-
-</div>
+<canvas id="canvas" width=300 height=300></canvas>
 
 <script>
-    var jsPoints = @Html.ToJson(Model.Points);
 
-    $(document).ready(function(){
-        $('#json').text(JSON.stringify(jsPoints));
+
+    $(document).ready(function () {
+
+        var jsPoints = @Html.ToJson(Model.Points);
+
+        var canvas=document.getElementById("canvas");
+        var ctx=canvas.getContext("2d");
+        var cw=canvas.width;
+        var ch=canvas.height;
+        function reOffset(){
+            var BB=canvas.getBoundingClientRect();
+            offsetX=BB.left;
+            offsetY=BB.top;
+        }
+        var offsetX,offsetY;
+        reOffset();
+        window.onscroll=function(e){ reOffset(); }
+        window.onresize=function(e){ reOffset(); }
+
+        var startX,startY;
+
+        var radius=5;
+        var nextLetter=65;
+        var anchors=[];
+        var connectors=[];
+        var draggingIndex=-1;
+        function addAnchor(x,y){
+            anchors.push({
+                label:String.fromCharCode(nextLetter),
+                x:x,
+                y:y,
+            });
+            nextLetter++;
+        }
+
+
+        $.each(jsPoints, function(idx, point) {
+            addAnchor(point.x, point.y);
+        });
+
+        draw();
+
+        $("#canvas").mousedown(function(e){handleMouseDown(e);});
+        $("#canvas").mousemove(function(e){handleMouseMove(e);});
+        $("#canvas").mouseup(function(e){handleMouseUpOut(e);});
+        $("#canvas").mouseout(function(e){handleMouseUpOut(e);});
+
+
+        function draw(){
+
+            //
+            ctx.clearRect(0,0,cw,ch);
+
+            // draw connecting lines
+            for(var i=0;i<connectors.length;i++){
+                var c=connectors[i];
+                var s=anchors[c.start];
+                var e=anchors[c.end];
+                ctx.beginPath();
+                ctx.moveTo(s.x,s.y);
+                ctx.lineTo(e.x,e.y);
+                ctx.stroke();
+            }
+
+            // draw circles
+            for(var i=0;i<anchors.length;i++){
+                ctx.beginPath();
+                ctx.arc(anchors[i].x,anchors[i].y,radius,0,Math.PI*2);
+                ctx.fill();
+                ctx.fillText(anchors[i].label,anchors[i].x-5,anchors[i].y-15);
+            }
+
+        }
+
+
+        function handleMouseDown(e){
+            // tell the browser we're handling this event
+            e.preventDefault();
+            e.stopPropagation();
+
+            startX=parseInt(e.clientX-offsetX);
+            startY=parseInt(e.clientY-offsetY);
+
+            draggingIndex=-1;
+            for(var i=0;i<anchors.length;i++){
+                var a=anchors[i];
+                var dx=startX-a.x;
+                var dy=startY-a.y;
+                if(dx*dx+dy*dy<radius*radius){
+                    draggingIndex=i;
+                    break;
+                }
+            }
+
+            // If a drag hasn't started, add another anchor here
+            if(draggingIndex==-1){
+                addAnchor(startX,startY);
+                if(anchors.length>1){
+                    connectors.push({start:0,end:1});
+                }
+                if(anchors.length>2){
+                    connectors.push({start:0,end:2});
+                }
+                if(anchors.length>3){
+                    connectors.push({start:1,end:3});
+                    connectors.push({start:1,end:2});
+                    connectors.push({start:2,end:3});
+                }
+
+                if(anchors.length>5){
+                    connectors.push({start:4,end:5});
+                }
+                if(anchors.length>6){
+
+                    connectors.push({start:4,end:6});
+                    connectors.push({start:5,end:6});
+                }
+
+                if(anchors.length>7){
+                    connectors.push({start:5,end:7});
+                    connectors.push({start:6,end:7});
+                }
+                draw();
+            }
+
+        }
+
+        function handleMouseUpOut(e){
+            // tell the browser we're handling this event
+            e.preventDefault();
+            e.stopPropagation();
+
+            mouseX=parseInt(e.clientX-offsetX);
+            mouseY=parseInt(e.clientY-offsetY);
+
+            draggingIndex=-1;
+        }
+
+
+        function handleMouseMove(e){
+
+            if(draggingIndex<0){return;}
+
+            // tell the browser we're handling this event
+            e.preventDefault();
+            e.stopPropagation();
+
+            mouseX=parseInt(e.clientX-offsetX);
+            mouseY=parseInt(e.clientY-offsetY);
+
+            var a=anchors[draggingIndex];
+            a.x+=(mouseX-startX);
+            a.y+=(mouseY-startY);
+            startX=mouseX;
+            startY=mouseY;
+            draw();
+        }
     });
 </script>
